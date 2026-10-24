@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Supreme Duelist Stickman Web Online</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0b0c10',
+                        cardBg: '#1f2833',
+                        neonRed: '#ff0055',
+                        neonBlue: '#00e5ff',
+                        neonYellow: '#ffea00',
+                        neonGreen: '#00ff66'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Matter.js Physics Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600;800&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0c10;
+            color: #ffffff;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .arcade-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .neon-glow-red {
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+        }
+
+        .neon-glow-blue {
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+        }
+
+        .neon-glow-yellow {
+            box-shadow: 0 0 15px rgba(255, 234, 0, 0.5);
+        }
+
+        .neon-text-red {
+            text-shadow: 0 0 10px rgba(255, 0, 85, 0.8);
+        }
+
+        .neon-text-blue {
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3a4750;
+            border-radius: 4px;
+        }
+
+        /* Virtual Control Touch Styling */
+        .touch-btn {
+            background: rgba(31, 40, 51, 0.7);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.1s ease, background-color 0.1s ease;
+        }
+        .touch-btn:active {
+            transform: scale(0.92);
+            background: rgba(0, 229, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="relative flex flex-col justify-between items-center w-full h-full overflow-hidden bg-slate-950">
+
+    <!-- Background Particle FX Canvas -->
+    <canvas id="bgCanvas" class="absolute inset-0 z-0 pointer-events-none opacity-30"></canvas>
+
+    <!-- MAIN MENU VIEW -->
+    <div id="mainMenu" class="relative z-10 w-full h-full flex flex-col items-center justify-between p-4 max-w-4xl mx-auto overflow-y-auto custom-scrollbar">
+        <!-- Title & Subtitle -->
+        <div class="text-center pt-6 space-y-2">
+            <h1 class="arcade-font text-3xl sm:text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neonRed via-neonYellow to-neonBlue neon-text-red tracking-wider uppercase animate-pulse">
+                Supreme Duelist
+            </h1>
+            <p class="arcade-font text-xs sm:text-base text-slate-400 tracking-widest uppercase">Stickman Web Online 1v1</p>
+        </div>
+
+        <!-- Character & Equipment Customizer Card -->
+        <div class="bg-cardBg/80 border border-slate-700/60 backdrop-blur-md rounded-2xl p-5 w-full max-w-2xl shadow-2xl space-y-5 my-auto">
+            
+            <!-- Player Settings -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs arcade-font text-slate-400 mb-1 uppercase">Player Name</label>
+                    <input type="text" id="playerNameInput" maxlength="12" value="StickMaster" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-2.5 text-white font-bold arcade-font focus:outline-none focus:border-neonBlue transition-all text-center">
+                </div>
+                <div>
+                    <label class="block text-xs arcade-font text-slate-400 mb-1 uppercase">Skin Color</label>
+                    <div class="flex items-center space-x-2 pt-1" id="colorPickerContainer">
+                        <!-- Color buttons filled by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weapon Selector -->
+            <div>
+                <label class="block text-xs arcade-font text-slate-400 mb-2 uppercase flex justify-between">
+                    <span>Select Weapon</span>
+                    <span id="selectedWeaponLabel" class="text-neonYellow font-bold">Lightsaber</span>
+                </label>
+                <div id="weaponGrid" class="grid grid-cols-4 sm:grid-cols-8 gap-2 max-h-36 overflow-y-auto p-1 custom-scrollbar">
+                    <!-- Weapon Buttons Populated via JS -->
+                </div>
+            </div>
+
+            <!-- Hat & Accessories Selector -->
+            <div>
+                <label class="block text-xs arcade-font text-slate-400 mb-2 uppercase flex justify-between">
+                    <span>Select Hat / Accessory</span>
+                    <span id="selectedHatLabel" class="text-neonBlue font-bold">Crown</span>
+                </label>
+                <div id="hatGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-28 overflow-y-auto p-1 custom-scrollbar">
+                    <!-- Hat Buttons Populated via JS -->
+                </div>
+            </div>
+
+            <!-- Room Action Buttons -->
+            <div class="grid grid-cols-2 gap-4 pt-2">
+                <button onclick="showCreateRoomModal()" class="py-3.5 bg-gradient-to-r from-neonBlue to-cyan-600 hover:from-cyan-500 hover:to-blue-600 text-slate-950 font-black arcade-font rounded-xl shadow-lg neon-glow-blue transition-all transform active:scale-95 uppercase tracking-wider text-sm flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-plus-circle text-lg"></i>
+                    <span>Create Room</span>
+                </button>
+                <button onclick="showJoinRoomModal()" class="py-3.5 bg-gradient-to-r from-neonRed to-rose-600 hover:from-rose-500 hover:to-pink-600 text-white font-black arcade-font rounded-xl shadow-lg neon-glow-red transition-all transform active:scale-95 uppercase tracking-wider text-sm flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-right-to-bracket text-lg"></i>
+                    <span>Join Room</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="pb-4 text-center text-xs text-slate-500 arcade-font">
+            <span class="inline-block w-2 h-2 rounded-full bg-neonGreen animate-ping mr-2"></span>
+            <span>Real-time Multiplayer Physics Arena • No Ads</span>
+        </div>
+    </div>
+
+    <!-- LOBBY / WAITING ROOM VIEW -->
+    <div id="waitingRoomView" class="hidden relative z-10 w-full h-full flex flex-col items-center justify-center p-4 max-w-3xl mx-auto space-y-6">
+        <div class="text-center space-y-2">
+            <h2 class="arcade-font text-3xl sm:text-4xl font-black text-neonBlue uppercase tracking-wider">Battle Lobby</h2>
+            <div class="inline-flex items-center space-x-3 bg-slate-900 border border-slate-700 px-4 py-2 rounded-xl">
+                <span class="text-slate-400 text-xs arcade-font">Room Code:</span>
+                <span id="displayRoomCode" class="text-neonYellow font-extrabold text-2xl arcade-font tracking-widest">----</span>
+                <button onclick="copyRoomCode()" class="text-slate-400 hover:text-white transition-colors p-1" title="Copy Code">
+                    <i class="fa-solid fa-copy"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 2 Players Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+            <!-- Player 1 Card (Host) -->
+            <div id="p1Card" class="bg-cardBg border-2 border-neonRed rounded-2xl p-5 flex flex-col items-center justify-center space-y-3 neon-glow-red">
+                <div class="w-16 h-16 rounded-full bg-slate-900 border-2 border-neonRed flex items-center justify-center text-neonRed text-2xl">
+                    <i class="fa-solid fa-user-ninja"></i>
+                </div>
+                <div class="text-center">
+                    <h3 id="p1NameDisplay" class="arcade-font font-bold text-lg text-white">Host Player</h3>
+                    <p id="p1LoadoutDisplay" class="text-xs text-slate-400 uppercase mt-1">Sword | Crown</p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold arcade-font bg-neonRed/20 text-neonRed border border-neonRed">HOST (P1)</span>
+            </div>
+
+            <!-- Player 2 Card (Guest) -->
+            <div id="p2Card" class="bg-cardBg border-2 border-slate-700 rounded-2xl p-5 flex flex-col items-center justify-center space-y-3">
+                <div class="w-16 h-16 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center text-slate-500 text-2xl" id="p2Avatar">
+                    <i class="fa-solid fa-user-clock"></i>
+                </div>
+                <div class="text-center">
+                    <h3 id="p2NameDisplay" class="arcade-font font-bold text-lg text-slate-400">Waiting for Challenger...</h3>
+                    <p id="p2LoadoutDisplay" class="text-xs text-slate-500 uppercase mt-1">-</p>
+                </div>
+                <span id="p2StatusBadge" class="px-3 py-1 rounded-full text-xs font-bold arcade-font bg-slate-800 text-slate-500 border border-slate-700">NOT READY</span>
+            </div>
+        </div>
+
+        <div class="flex space-x-4 w-full max-w-md pt-4">
+            <button onclick="leaveRoom()" class="flex-1 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold arcade-font rounded-xl transition-all">
+                Leave
+            </button>
+            <button id="startBattleBtn" onclick="startBattle()" disabled class="flex-1 py-3.5 bg-gradient-to-r from-neonGreen to-emerald-600 text-slate-950 font-black arcade-font rounded-xl shadow-lg opacity-50 cursor-not-allowed transition-all uppercase tracking-wider">
+                Start Battle
+            </button>
+        </div>
+    </div>
+
+    <!-- GAMEPLAY ARENA VIEW -->
+    <div id="gameView" class="hidden relative z-10 w-full h-full flex flex-col justify-between">
+        <!-- TOP HUD -->
+        <div class="absolute top-3 left-3 right-3 z-30 flex justify-between items-center pointer-events-none">
+            <!-- P1 HUD -->
+            <div class="flex items-center space-x-2 sm:space-x-3 bg-slate-900/90 backdrop-blur-md border border-slate-800 p-2.5 rounded-2xl pointer-events-auto">
+                <div class="w-9 h-9 rounded-full bg-neonRed/20 border border-neonRed flex items-center justify-center text-neonRed font-bold text-sm">
+                    P1
+                </div>
+                <div class="space-y-1">
+                    <div class="flex justify-between text-[11px] arcade-font space-x-2">
+                        <span id="hudP1Name" class="font-bold text-white truncate max-w-[80px] sm:max-w-[120px]">P1</span>
+                        <span id="hudP1Hp" class="text-neonRed font-bold">100 HP</span>
+                    </div>
+                    <div class="w-28 sm:w-44 h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                        <div id="p1HpBar" class="h-full bg-gradient-to-r from-rose-600 to-neonRed rounded-full transition-all duration-100" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <div class="text-center px-1 sm:px-2 border-l border-slate-800">
+                    <span class="text-[9px] text-slate-400 block arcade-font">WINS</span>
+                    <span id="p1Score" class="arcade-font text-base sm:text-lg font-black text-neonRed">0</span>
+                </div>
+            </div>
+
+            <!-- Round / Timer Indicator -->
+            <div class="bg-slate-900/90 backdrop-blur-md border border-slate-800 px-4 py-2 rounded-2xl pointer-events-auto text-center">
+                <span class="text-[9px] uppercase arcade-font text-slate-400 block">Round</span>
+                <span id="roundIndicator" class="arcade-font text-base sm:text-xl font-black text-neonYellow">1</span>
+            </div>
+
+            <!-- P2 HUD -->
+            <div class="flex items-center space-x-2 sm:space-x-3 bg-slate-900/90 backdrop-blur-md border border-slate-800 p-2.5 rounded-2xl pointer-events-auto flex-row-reverse space-x-reverse">
+                <div class="w-9 h-9 rounded-full bg-neonBlue/20 border border-neonBlue flex items-center justify-center text-neonBlue font-bold text-sm">
+                    P2
+                </div>
+                <div class="space-y-1 text-right">
+                    <div class="flex justify-between flex-row-reverse text-[11px] arcade-font space-x-2">
+                        <span id="hudP2Name" class="font-bold text-white truncate max-w-[80px] sm:max-w-[120px]">P2</span>
+                        <span id="hudP2Hp" class="text-neonBlue font-bold">100 HP</span>
+                    </div>
+                    <div class="w-28 sm:w-44 h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 flex justify-end">
+                        <div id="p2HpBar" class="h-full bg-gradient-to-l from-cyan-600 to-neonBlue rounded-full transition-all duration-100" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <div class="text-center px-1 sm:px-2 border-r border-slate-800">
+                    <span class="text-[9px] text-slate-400 block arcade-font">WINS</span>
+                    <span id="p2Score" class="arcade-font text-base sm:text-lg font-black text-neonBlue">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN PHYSICS GAME CANVAS -->
+        <div id="canvasContainer" class="w-full h-full relative overflow-hidden bg-slate-950">
+            <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+        </div>
+
+        <!-- ON-SCREEN VIRTUAL CONTROLS FOR MOBILE / TOUCH -->
+        <div class="absolute bottom-4 left-4 right-4 z-30 flex justify-between items-end pointer-events-none">
+            <!-- Left Virtual Joystick Zone -->
+            <div id="joystickZone" class="relative w-36 h-36 bg-slate-900/50 backdrop-blur-sm rounded-full border border-slate-700/60 pointer-events-auto flex items-center justify-center">
+                <div id="joystickKnob" class="w-14 h-14 bg-neonBlue/80 rounded-full border-2 border-white shadow-lg pointer-events-none transition-transform duration-75"></div>
+            </div>
+
+            <!-- Right Action Buttons -->
+            <div class="flex items-center space-x-3 pointer-events-auto">
+                <button id="btnShield" class="touch-btn w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-neonYellow shadow-md">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                    <span class="text-[8px] arcade-font mt-0.5">SHIELD</span>
+                </button>
+                <button id="btnSpecial" class="touch-btn w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-amber-400 shadow-md">
+                    <i class="fa-solid fa-bolt text-xl"></i>
+                    <span class="text-[8px] arcade-font mt-0.5">SPECIAL</span>
+                </button>
+                <button id="btnAttack" class="touch-btn w-18 h-18 w-16 h-16 rounded-2xl bg-rose-600/80 border-rose-400 flex flex-col items-center justify-center text-white shadow-lg">
+                    <i class="fa-solid fa-sword text-2xl"></i>
+                    <span class="text-[9px] arcade-font mt-0.5 font-bold">ATTACK</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- Create Room Modal -->
+    <div id="createRoomModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-cardBg border border-slate-800 rounded-2xl p-6 max-w-sm w-full space-y-6 shadow-2xl">
+            <h3 class="arcade-font text-xl font-bold text-neonBlue text-center">Create Room</h3>
+            <p class="text-xs text-slate-400 text-center">A 4-digit room code will be generated for your friend to join on any device.</p>
+            <div class="flex space-x-3">
+                <button onclick="closeModals()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold arcade-font rounded-xl transition-all">Cancel</button>
+                <button onclick="confirmCreateRoom()" class="flex-1 py-3 bg-neonBlue hover:bg-cyan-400 text-slate-950 font-black arcade-font rounded-xl shadow-lg transition-all uppercase">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Room Modal -->
+    <div id="joinRoomModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-cardBg border border-slate-800 rounded-2xl p-6 max-w-sm w-full space-y-6 shadow-2xl">
+            <h3 class="arcade-font text-xl font-bold text-neonRed text-center">Join Room</h3>
+            <div>
+                <label class="block text-xs arcade-font text-slate-400 mb-2 uppercase">4-Digit Room Code</label>
+                <input type="text" id="roomCodeInput" maxlength="4" placeholder="1234" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white font-bold arcade-font text-center text-2xl tracking-widest focus:outline-none focus:border-neonRed transition-all">
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="closeModals()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold arcade-font rounded-xl transition-all">Cancel</button>
+                <button onclick="confirmJoinRoom()" class="flex-1 py-3 bg-neonRed hover:bg-rose-500 text-white font-black arcade-font rounded-xl shadow-lg transition-all uppercase">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notice / Alert Modal -->
+    <div id="messageModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-cardBg border border-slate-800 rounded-2xl p-6 max-w-sm w-full space-y-5 shadow-2xl text-center">
+            <div id="messageIcon" class="text-4xl text-neonYellow"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h3 id="messageTitle" class="arcade-font text-xl font-bold text-white">Notice</h3>
+            <p id="messageText" class="text-xs text-slate-300 leading-relaxed"></p>
+            <button onclick="closeMessageModal()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold arcade-font rounded-xl transition-all">OK</button>
+        </div>
+    </div>
+
+    <!-- Victory / Round End Modal -->
+    <div id="victoryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+        <div class="bg-cardBg border-2 border-neonYellow rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl text-center">
+            <div class="text-5xl text-neonYellow animate-bounce"><i class="fa-solid fa-trophy"></i></div>
+            <h2 id="victoryTitle" class="arcade-font text-2xl sm:text-3xl font-black text-white uppercase tracking-wider">Player 1 Wins!</h2>
+            <p id="victorySubtitle" class="text-slate-400 text-xs arcade-font">Round Completed</p>
+            <div class="flex space-x-3 pt-2">
+                <button onclick="backToMenu()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold arcade-font rounded-xl transition-all">Menu</button>
+                <button id="nextRoundBtn" onclick="nextRound()" class="flex-1 py-3 bg-gradient-to-r from-neonYellow to-amber-500 hover:from-amber-400 text-slate-950 font-black arcade-font rounded-xl shadow-lg transition-all uppercase">Next Round</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        window.firebaseApp = null;
+        window.db = null;
+        window.auth = null;
+        window.currentUser = null;
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'supreme-duelist-web-online';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyMockKeyForDevelopmentOnly123456",
+            authDomain: "mock-app.firebaseapp.com",
+            projectId: "mock-app",
+            storageBucket: "mock-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+
+        async function initFirebase() {
+            try {
+                window.firebaseApp = initializeApp(firebaseConfig);
+                window.db = getFirestore(window.firebaseApp);
+                window.auth = getAuth(window.firebaseApp);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(window.auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(window.auth);
+                }
+                window.currentUser = window.auth.currentUser;
+                console.log("Firebase Auth Connected. UID:", window.currentUser?.uid);
+            } catch (err) {
+                console.error("Firebase auth error:", err);
+            }
+        }
+        initFirebase();
+
+        window.fsOps = {
+            doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp,
+            getRoomRef: (roomId) => doc(window.db, 'artifacts', appId, 'public', 'data', 'rooms', roomId)
+        };
+    </script>
+
+    <!-- Main Game Script -->
+    <script>
+        // --- CONSTANTS & WEAPONS / HATS DEFINITIONS ---
+        const WEAPONS = [
+            { id: 'lightsaber', name: 'Lightsaber', icon: 'fa-jedi' },
+            { id: 'sword', name: 'Energy Sword', icon: 'fa-sword' },
+            { id: 'spear', name: 'Spear', icon: 'fa-wand-magic' },
+            { id: 'bow', name: 'Bow & Arrow', icon: 'fa-bow-arrow' },
+            { id: 'rocket', name: 'Rocket Launcher', icon: 'fa-rocket' },
+            { id: 'katana', name: 'Katana', icon: 'fa-shield-halved' },
+            { id: 'shield', name: 'Shield', icon: 'fa-shield' },
+            { id: 'scythe', name: 'Scythe', icon: 'fa-skull' },
+            { id: 'hammer', name: 'Hammer', icon: 'fa-hammer' },
+            { id: 'laser', name: 'Laser Gun', icon: 'fa-bolt' },
+            { id: 'pistols', name: 'Dual Pistols', icon: 'fa-gun' },
+            { id: 'wand', name: 'Magic Wand', icon: 'fa-hat-wizard' },
+            { id: 'boxing', name: 'Boxing Gloves', icon: 'fa-mitten' },
+            { id: 'portal', name: 'Portal Gun', icon: 'fa-circle-dot' },
+            { id: 'trident', name: 'Trident', icon: 'fa-water' },
+            { id: 'flamethrower', name: 'Flame Thrower', icon: 'fa-fire' }
+        ];
+
+        const HATS = [
+            { id: 'crown', name: 'Crown', icon: 'fa-crown' },
+            { id: 'viking', name: 'Viking Horns', icon: 'fa-spaghetti-monster-flying' },
+            { id: 'ninja', name: 'Ninja Headband', icon: 'fa-mask' },
+            { id: 'anime', name: 'Anime Hair', icon: 'fa-user-ninja' },
+            { id: 'hero', name: 'Hero Cape', icon: 'fa-vest' },
+            { id: 'cyber', name: 'Cyber Helm', icon: 'fa-headset' },
+            { id: 'wizard', name: 'Wizard Hat', icon: 'fa-hat-wizard' },
+            { id: 'cowboy', name: 'Cowboy Hat', icon: 'fa-hat-cowboy' },
+            { id: 'demon', name: 'Demon Horns', icon: 'fa-ghost' },
+            { id: 'halo', name: 'Halo', icon: 'fa-sun' },
+            { id: 'pirate', name: 'Pirate Hat', icon: 'fa-skull-crossbones' },
+            { id: 'robot', name: 'Robot Head', icon: 'fa-robot' }
+        ];
+
+        const SKIN_COLORS = ['#ff0055', '#00e5ff', '#00ff66', '#ffea00', '#ff9900', '#a855f7', '#ffffff', '#38bdf8'];
+
+        // Player customizer choices
+        let selectedWeapon = 'lightsaber';
+        let selectedHat = 'crown';
+        let selectedColor = '#ff0055';
+
+        // Room & Sync state
+        let currentRoomCode = null;
+        let isHost = false;
+        let roomUnsubscribe = null;
+
+        // Local & Remote Game State
+        let gameState = {
+            status: 'menu',
+            round: 1,
+            p1Score: 0,
+            p2Score: 0
+        };
+
+        // Inputs
+        const keys = { left: false, right: false, up: false, attack: false, special: false, shield: false };
+        const joystick = { active: false, dx: 0, dy: 0 };
+
+        // Matter.js Handles
+        let engine, runner, canvas, ctx;
+        let p1Stick, p2Stick;
+        let projectiles = [];
+        let particles = [];
+        let damageTexts = [];
+
+        // UI Builder Functions
+        function initCustomizerUI() {
+            // Skin Color Picker
+            const colorContainer = document.getElementById('colorPickerContainer');
+            colorContainer.innerHTML = '';
+            SKIN_COLORS.forEach(color => {
+                const btn = document.createElement('button');
+                btn.className = `w-7 h-7 rounded-full border-2 ${color === selectedColor ? 'border-white scale-110 shadow-md' : 'border-transparent'} transition-all`;
+                btn.style.backgroundColor = color;
+                btn.onclick = () => {
+                    selectedColor = color;
+                    initCustomizerUI();
+                };
+                colorContainer.appendChild(btn);
+            });
+
+            // Weapon Grid
+            const weaponGrid = document.getElementById('weaponGrid');
+            weaponGrid.innerHTML = '';
+            WEAPONS.forEach(w => {
+                const active = w.id === selectedWeapon;
+                const btn = document.createElement('button');
+                btn.className = `flex flex-col items-center justify-center p-2 rounded-xl bg-slate-900 border ${active ? 'border-neonYellow text-neonYellow bg-slate-800' : 'border-slate-800 text-slate-400'} hover:bg-slate-800 transition-all text-center`;
+                btn.onclick = () => {
+                    selectedWeapon = w.id;
+                    document.getElementById('selectedWeaponLabel').innerText = w.name;
+                    initCustomizerUI();
+                };
+                btn.innerHTML = `<i class="fa-solid ${w.icon} text-base mb-1"></i><span class="text-[9px] arcade-font truncate w-full">${w.name}</span>`;
+                weaponGrid.appendChild(btn);
+            });
+
+            // Hat Grid
+            const hatGrid = document.getElementById('hatGrid');
+            hatGrid.innerHTML = '';
+            HATS.forEach(h => {
+                const active = h.id === selectedHat;
+                const btn = document.createElement('button');
+                btn.className = `flex flex-col items-center justify-center p-2 rounded-xl bg-slate-900 border ${active ? 'border-neonBlue text-neonBlue bg-slate-800' : 'border-slate-800 text-slate-400'} hover:bg-slate-800 transition-all text-center`;
+                btn.onclick = () => {
+                    selectedHat = h.id;
+                    document.getElementById('selectedHatLabel').innerText = h.name;
+                    initCustomizerUI();
+                };
+                btn.innerHTML = `<i class="fa-solid ${h.icon} text-base mb-1"></i><span class="text-[9px] arcade-font truncate w-full">${h.name}</span>`;
+                hatGrid.appendChild(btn);
+            });
+        }
+        initCustomizerUI();
+
+        // Background Particles
+        const bgCanvas = document.getElementById('bgCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        let bgParticles = [];
+
+        function initBgParticles() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+            bgParticles = [];
+            for (let i = 0; i < 35; i++) {
+                bgParticles.push({
+                    x: Math.random() * bgCanvas.width,
+                    y: Math.random() * bgCanvas.height,
+                    r: Math.random() * 2.5 + 1,
+                    color: Math.random() > 0.5 ? '#00e5ff' : '#ff0055',
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4
+                });
+            }
+        }
+
+        function animateBg() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            bgParticles.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if(p.x < 0) p.x = bgCanvas.width;
+                if(p.x > bgCanvas.width) p.x = 0;
+                if(p.y < 0) p.y = bgCanvas.height;
+                if(p.y > bgCanvas.height) p.y = 0;
+
+                bgCtx.beginPath();
+                bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                bgCtx.fillStyle = p.color;
+                bgCtx.fill();
+            });
+            requestAnimationFrame(animateBg);
+        }
+        window.addEventListener('resize', initBgParticles);
+        initBgParticles();
+        animateBg();
+
+        // --- ROOM MANAGEMENT & FIREBASE SYNC ---
+        function showCreateRoomModal() {
+            document.getElementById('createRoomModal').classList.remove('hidden');
+        }
+        function showJoinRoomModal() {
+            document.getElementById('joinRoomModal').classList.remove('hidden');
+        }
+        function closeModals() {
+            document.getElementById('createRoomModal').classList.add('hidden');
+            document.getElementById('joinRoomModal').classList.add('hidden');
+        }
+        function showMessage(title, text) {
+            document.getElementById('messageTitle').innerText = title;
+            document.getElementById('messageText').innerText = text;
+            document.getElementById('messageModal').classList.remove('hidden');
+        }
+        function closeMessageModal() {
+            document.getElementById('messageModal').classList.add('hidden');
+        }
+
+        async function confirmCreateRoom() {
+            closeModals();
+            if (!window.currentUser || !window.db) {
+                showMessage('Connecting', 'Initializing server connection... Please try again.');
+                return;
+            }
+
+            const name = document.getElementById('playerNameInput').value.trim() || 'P1 Stick';
+            const roomId = Math.floor(1000 + Math.random() * 9000).toString();
+            currentRoomCode = roomId;
+            isHost = true;
+
+            const roomRef = window.fsOps.getRoomRef(roomId);
+            const initialData = {
+                roomId: roomId,
+                hostId: window.currentUser.uid,
+                hostName: name,
+                hostWeapon: selectedWeapon,
+                hostHat: selectedHat,
+                hostColor: selectedColor,
+                guestId: '',
+                guestName: '',
+                guestWeapon: 'sword',
+                guestHat: 'crown',
+                guestColor: '#00e5ff',
+                status: 'waiting',
+                p1State: { x: 250, y: 300, vx: 0, vy: 0, angle: 0, hp: 100, shield: false },
+                p2State: { x: 650, y: 300, vx: 0, vy: 0, angle: 0, hp: 100, shield: false },
+                score: { p1: 0, p2: 0 },
+                round: 1,
+                updatedAt: window.fsOps.serverTimestamp()
+            };
+
+            try {
+                await window.fsOps.setDoc(roomRef, initialData);
+                enterWaitingRoom(roomId, true);
+                listenToRoom(roomId);
+            } catch (e) {
+                console.error("Error creating room:", e);
+                showMessage("Error", "Could not create online room.");
+            }
+        }
+
+        async function confirmJoinRoom() {
+            const code = document.getElementById('roomCodeInput').value.trim();
+            if(code.length !== 4) {
+                showMessage("Invalid Code", "Please enter a 4-digit code.");
+                return;
+            }
+            closeModals();
+
+            if (!window.currentUser || !window.db) {
+                showMessage('Connecting', 'Connecting to server... Please try again.');
+                return;
+            }
+
+            const name = document.getElementById('playerNameInput').value.trim() || 'P2 Stick';
+            const roomId = code;
+            const roomRef = window.fsOps.getRoomRef(roomId);
+
+            try {
+                const snap = await window.fsOps.getDoc(roomRef);
+                if(!snap.exists()) {
+                    showMessage("Not Found", "Room code does not exist.");
+                    return;
+                }
+                const data = snap.data();
+                if(data.status !== 'waiting') {
+                    showMessage("Room Full", "This match is already in progress.");
+                    return;
+                }
+
+                currentRoomCode = roomId;
+                isHost = false;
+
+                await window.fsOps.updateDoc(roomRef, {
+                    guestId: window.currentUser.uid,
+                    guestName: name,
+                    guestWeapon: selectedWeapon,
+                    guestHat: selectedHat,
+                    guestColor: selectedColor
+                });
+
+                enterWaitingRoom(roomId, false);
+                listenToRoom(roomId);
+            } catch (e) {
+                console.error("Error joining room:", e);
+                showMessage("Error", "Could not join room.");
+            }
+        }
+
+        function enterWaitingRoom(roomId, host) {
+            document.getElementById('mainMenu').classList.add('hidden');
+            document.getElementById('waitingRoomView').classList.remove('hidden');
+            document.getElementById('displayRoomCode').innerText = roomId;
+
+            const name = document.getElementById('playerNameInput').value.trim() || 'StickHero';
+            if (host) {
+                document.getElementById('p1NameDisplay').innerText = name;
+                document.getElementById('p1LoadoutDisplay').innerText = `${selectedWeapon.toUpperCase()} | ${selectedHat.toUpperCase()}`;
+            } else {
+                document.getElementById('p2NameDisplay').innerText = name;
+                document.getElementById('p2LoadoutDisplay').innerText = `${selectedWeapon.toUpperCase()} | ${selectedHat.toUpperCase()}`;
+                document.getElementById('p2StatusBadge').innerText = "READY";
+                document.getElementById('p2StatusBadge').className = "px-3 py-1 rounded-full text-xs font-bold arcade-font bg-neonBlue/20 text-neonBlue border border-neonBlue";
+            }
+        }
+
+        function listenToRoom(roomId) {
+            const roomRef = window.fsOps.getRoomRef(roomId);
+            roomUnsubscribe = window.fsOps.onSnapshot(roomRef, (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+
+                if (isHost && data.guestId) {
+                    document.getElementById('p2NameDisplay').innerText = data.guestName;
+                    document.getElementById('p2LoadoutDisplay').innerText = `${data.guestWeapon.toUpperCase()} | ${data.guestHat.toUpperCase()}`;
+                    document.getElementById('p2StatusBadge').innerText = "READY";
+                    document.getElementById('p2StatusBadge').className = "px-3 py-1 rounded-full text-xs font-bold arcade-font bg-neonBlue/20 text-neonBlue border border-neonBlue";
+
+                    const startBtn = document.getElementById('startBattleBtn');
+                    startBtn.disabled = false;
+                    startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else if (!isHost) {
+                    document.getElementById('p1NameDisplay').innerText = data.hostName;
+                    document.getElementById('p1LoadoutDisplay').innerText = `${data.hostWeapon.toUpperCase()} | ${data.hostHat.toUpperCase()}`;
+                }
+
+                if (data.status === 'playing' && gameState.status !== 'playing') {
+                    startOnlineGameSession(data);
+                }
+
+                // Sync Network Positions during Gameplay
+                if (gameState.status === 'playing') {
+                    if (isHost && data.p2State && p2Stick) {
+                        // Apply position interpolation for Guest
+                        p2Stick.targetX = data.p2State.x;
+                        p2Stick.targetY = data.p2State.y;
+                        p2Stick.shield = data.p2State.shield;
+                    } else if (!isHost && data.p1State && p1Stick) {
+                        // Apply position interpolation for Host
+                        p1Stick.targetX = data.p1State.x;
+                        p1Stick.targetY = data.p1State.y;
+                        p1Stick.shield = data.p1State.shield;
+                    }
+                }
+            }, (err) => console.error("Snapshot error:", err));
+        }
+
+        function copyRoomCode() {
+            if(!currentRoomCode) return;
+            const temp = document.createElement('input');
+            temp.value = currentRoomCode;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showMessage('Copied', `Room code ${currentRoomCode} copied to clipboard!`);
+        }
+
+        async function startBattle() {
+            if (!isHost) return;
+            const roomRef = window.fsOps.getRoomRef(currentRoomCode);
+            await window.fsOps.updateDoc(roomRef, { status: 'playing' });
+        }
+
+        function leaveRoom() {
+            if(roomUnsubscribe) roomUnsubscribe();
+            if(currentRoomCode && isHost) {
+                window.fsOps.deleteDoc(window.fsOps.getRoomRef(currentRoomCode)).catch(()=>{});
+            }
+            currentRoomCode = null;
+            document.getElementById('waitingRoomView').classList.add('hidden');
+            document.getElementById('mainMenu').classList.remove('hidden');
+        }
+
+        // --- GAMEPLAY ENGINE (MATTER.JS + CANVAS) ---
+        function startOnlineGameSession(roomData) {
+            document.getElementById('waitingRoomView').classList.add('hidden');
+            document.getElementById('gameView').classList.remove('hidden');
+
+            document.getElementById('hudP1Name').innerText = roomData.hostName;
+            document.getElementById('hudP2Name').innerText = roomData.guestName;
+
+            gameState.status = 'playing';
+
+            initPhysicsGame(roomData);
+            setupInputListeners();
+        }
+
+        function initPhysicsGame(roomData) {
+            const { Engine, Runner, Bodies, Composite, Body, Constraint } = Matter;
+
+            const container = document.getElementById('canvasContainer');
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+
+            engine = Engine.create();
+            engine.world.gravity.y = 1.2;
+
+            canvas = document.getElementById('gameCanvas');
+            canvas.width = w;
+            canvas.height = h;
+            ctx = canvas.getContext('2d');
+
+            // Platforms & Map Hazards (Floating Arena + Lava bottom)
+            const ground = Bodies.rectangle(w / 2, h - 25, w, 50, { isStatic: true, render: { fillStyle: '#1f2833' } });
+            const p1 = Bodies.rectangle(w * 0.28, h * 0.65, w * 0.25, 20, { isStatic: true, render: { fillStyle: '#3a4750' } });
+            const p2 = Bodies.rectangle(w * 0.72, h * 0.65, w * 0.25, 20, { isStatic: true, render: { fillStyle: '#3a4750' } });
+            const centerPlat = Bodies.rectangle(w * 0.5, h * 0.4, w * 0.28, 20, { isStatic: true, render: { fillStyle: '#3a4750' } });
+
+            Composite.add(engine.world, [ground, p1, p2, centerPlat]);
+
+            // Create Active Ragdoll Stickmen
+            p1Stick = createRagdollStickman(w * 0.25, h * 0.45, roomData.hostColor || '#ff0055', roomData.hostWeapon, roomData.hostHat);
+            p2Stick = createRagdollStickman(w * 0.75, h * 0.45, roomData.guestColor || '#00e5ff', roomData.guestWeapon, roomData.guestHat);
+
+            runner = Runner.create();
+            Runner.run(runner, engine);
+
+            requestAnimationFrame(gamePhysicsLoop);
+            setInterval(syncNetworkPosition, 100); // 10Hz network state broadcast
+        }
+
+        function createRagdollStickman(x, y, color, weaponId, hatId) {
+            const { Bodies, Composite, Constraint } = Matter;
+
+            const torso = Bodies.rectangle(x, y, 18, 48, { friction: 0.2, restitution: 0.1, density: 0.002 });
+            const head = Bodies.circle(x, y - 35, 14, { friction: 0.2, restitution: 0.2 });
+            
+            const headConstraint = Constraint.create({ bodyA: torso, pointA: { x: 0, y: -24 }, bodyB: head, pointB: { x: 0, y: 14 }, stiffness: 0.9 });
+
+            // Weapon Hand Body
+            const weaponHand = Bodies.circle(x + 20, y, 8, { friction: 0.1, density: 0.001 });
+            const armConstraint = Constraint.create({ bodyA: torso, pointA: { x: 10, y: -10 }, bodyB: weaponHand, pointB: { x: 0, y: 0 }, stiffness: 0.5, length: 25 });
+
+            const characterGroup = Composite.create();
+            Composite.add(characterGroup, [torso, head, weaponHand, headConstraint, armConstraint]);
+            Composite.add(engine.world, characterGroup);
+
+            return {
+                torso, head, weaponHand,
+                color, weaponId, hatId,
+                hp: 100,
+                shield: false,
+                facing: x < window.innerWidth / 2 ? 1 : -1,
+                specialCooldown: 0,
+                targetX: x, targetY: y
+            };
+        }
+
+        // --- CONTROLS & INPUT MANAGEMENT ---
+        function setupInputListeners() {
+            // Keyboard
+            window.addEventListener('keydown', (e) => {
+                if(e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = true;
+                if(e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = true;
+                if(e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp' || e.key === ' ') keys.up = true;
+                if(e.key === 'j' || e.key === 'J') performAttack();
+                if(e.key === 'k' || e.key === 'K') performSpecial();
+                if(e.key === 'l' || e.key === 'L') keys.shield = true;
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if(e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.left = false;
+                if(e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.right = false;
+                if(e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp' || e.key === ' ') keys.up = false;
+                if(e.key === 'l' || e.key === 'L') keys.shield = false;
+            });
+
+            // Mobile Virtual Joystick Setup
+            const zone = document.getElementById('joystickZone');
+            const knob = document.getElementById('joystickKnob');
+
+            let zoneRect = zone.getBoundingClientRect();
+
+            function handleTouchMove(e) {
+                const touch = e.touches ? e.touches[0] : e;
+                zoneRect = zone.getBoundingClientRect();
+                const centerX = zoneRect.left + zoneRect.width / 2;
+                const centerY = zoneRect.top + zoneRect.height / 2;
+
+                let dx = touch.clientX - centerX;
+                let dy = touch.clientY - centerY;
+                const distance = Math.hypot(dx, dy);
+                const maxRadius = zoneRect.width / 2 - 15;
+
+                if (distance > maxRadius) {
+                    dx = (dx / distance) * maxRadius;
+                    dy = (dy / distance) * maxRadius;
+                }
+
+                knob.style.transform = `translate(${dx}px, ${dy}px)`;
+                joystick.dx = dx / maxRadius;
+                joystick.dy = dy / maxRadius;
+                joystick.active = true;
+            }
+
+            function handleTouchEnd() {
+                knob.style.transform = `translate(0px, 0px)`;
+                joystick.dx = 0; joystick.dy = 0;
+                joystick.active = false;
+            }
+
+            zone.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouchMove(e); });
+            zone.addEventListener('touchmove', (e) => { e.preventDefault(); handleTouchMove(e); });
+            zone.addEventListener('touchend', (e) => { e.preventDefault(); handleTouchEnd(); });
+
+            // On-screen Buttons
+            document.getElementById('btnAttack').addEventListener('touchstart', (e) => { e.preventDefault(); performAttack(); });
+            document.getElementById('btnAttack').addEventListener('click', () => performAttack());
+
+            document.getElementById('btnSpecial').addEventListener('touchstart', (e) => { e.preventDefault(); performSpecial(); });
+            document.getElementById('btnSpecial').addEventListener('click', () => performSpecial());
+
+            const btnShield = document.getElementById('btnShield');
+            btnShield.addEventListener('touchstart', (e) => { e.preventDefault(); keys.shield = true; });
+            btnShield.addEventListener('touchend', (e) => { e.preventDefault(); keys.shield = false; });
+            btnShield.addEventListener('mousedown', () => keys.shield = true);
+            btnShield.addEventListener('mouseup', () => keys.shield = false);
+        }
+
+        // Action Executions
+        function performAttack() {
+            const myStick = isHost ? p1Stick : p2Stick;
+            if(!myStick || myStick.hp <= 0) return;
+
+            const dir = myStick.facing;
+            Matter.Body.applyForce(myStick.torso, myStick.torso.position, { x: dir * 0.025, y: -0.01 });
+
+            // Create projectile or melee hit logic based on weapon
+            createWeaponAttackFx(myStick, false);
+        }
+
+        function performSpecial() {
+            const myStick = isHost ? p1Stick : p2Stick;
+            if(!myStick || myStick.hp <= 0) return;
+
+            if(myStick.specialCooldown > 0) return;
+            myStick.specialCooldown = 180; // 3 second CD
+
+            const dir = myStick.facing;
+            Matter.Body.applyForce(myStick.torso, myStick.torso.position, { x: dir * 0.05, y: -0.03 });
+
+            createWeaponAttackFx(myStick, true);
+        }
+
+        function createWeaponAttackFx(stick, isSpecial) {
+            const { torso, weaponId, facing } = stick;
+            const x = torso.position.x + facing * 25;
+            const y = torso.position.y;
+
+            // Add particle trail slash
+            particles.push({
+                x, y,
+                vx: facing * (isSpecial ? 8 : 4),
+                vy: (Math.random() - 0.5) * 3,
+                r: isSpecial ? 12 : 6,
+                color: stick.color,
+                life: 20
+            });
+
+            // Projectile creation for ranged weapons
+            if (['bow', 'rocket', 'laser', 'pistols', 'wand', 'portal', 'flamethrower'].includes(weaponId) || isSpecial) {
+                projectiles.push({
+                    x, y,
+                    vx: facing * (isSpecial ? 14 : 10),
+                    vy: (Math.random() - 0.5) * (isSpecial ? 1 : 2),
+                    r: isSpecial ? 10 : 5,
+                    damage: isSpecial ? 25 : 12,
+                    owner: stick,
+                    color: stick.color,
+                    life: 120
+                });
+            } else {
+                // Melee Collision Check against opponent
+                const opponent = isHost ? p2Stick : p1Stick;
+                const dist = Math.hypot(opponent.torso.position.x - x, opponent.torso.position.y - y);
+                if (dist < 60) {
+                    dealDamage(opponent, isSpecial ? 25 : 12, facing);
+                }
+            }
+        }
+
+        function dealDamage(target, amount, hitDir = 1) {
+            if (target.shield) {
+                amount = Math.floor(amount * 0.2); // 80% shield reduction
+            }
+
+            target.hp = Math.max(0, target.hp - amount);
+
+            // Knockback Force
+            Matter.Body.applyForce(target.torso, target.torso.position, { x: hitDir * 0.04 * (amount / 10), y: -0.02 });
+
+            // Floating Damage Text
+            damageTexts.push({
+                x: target.torso.position.x,
+                y: target.torso.position.y - 20,
+                text: `-${amount}`,
+                color: target.shield ? '#ffea00' : '#ff0055',
+                life: 40
+            });
+
+            // Update UI Bars
+            document.getElementById('p1HpBar').style.width = `${p1Stick.hp}%`;
+            document.getElementById('hudP1Hp').innerText = `${p1Stick.hp} HP`;
+            document.getElementById('p2HpBar').style.width = `${p2Stick.hp}%`;
+            document.getElementById('hudP2Hp').innerText = `${p2Stick.hp} HP`;
+
+            // Check Win Round
+            if (target.hp <= 0 && gameState.status === 'playing') {
+                gameState.status = 'ended';
+                const winner = target === p1Stick ? 'Player 2' : 'Player 1';
+                if (target === p1Stick) gameState.p2Score++; else gameState.p1Score++;
+
+                document.getElementById('p1Score').innerText = gameState.p1Score;
+                document.getElementById('p2Score').innerText = gameState.p2Score;
+
+                setTimeout(() => {
+                    document.getElementById('victoryTitle').innerText = `${winner} Wins Round ${gameState.round}!`;
+                    document.getElementById('victoryModal').classList.remove('hidden');
+                }, 1000);
+            }
+        }
+
+        // Sync Network State to Firestore
+        async function syncNetworkPosition() {
+            if (!currentRoomCode || gameState.status !== 'playing') return;
+            const myStick = isHost ? p1Stick : p2Stick;
+            if (!myStick) return;
+
+            const roomRef = window.fsOps.getRoomRef(currentRoomCode);
+            const stateObj = {
+                x: myStick.torso.position.x,
+                y: myStick.torso.position.y,
+                vx: myStick.torso.velocity.x,
+                vy: myStick.torso.velocity.y,
+                hp: myStick.hp,
+                shield: myStick.shield
+            };
+
+            try {
+                if (isHost) {
+                    await window.fsOps.updateDoc(roomRef, { p1State: stateObj });
+                } else {
+                    await window.fsOps.updateDoc(roomRef, { p2State: stateObj });
+                }
+            } catch(e) {}
+        }
+
+        // --- MAIN GAME LOOP & RENDERER ---
+        function gamePhysicsLoop() {
+            if (gameState.status !== 'playing') return;
+
+            const myStick = isHost ? p1Stick : p2Stick;
+            const opponentStick = isHost ? p2Stick : p1Stick;
+
+            // Handle Local Input Physics
+            if (myStick && myStick.hp > 0) {
+                myStick.shield = keys.shield;
+
+                let moveX = 0;
+                if (keys.left || joystick.dx < -0.3) moveX = -1;
+                if (keys.right || joystick.dx > 0.3) moveX = 1;
+
+                if (moveX !== 0) {
+                    myStick.facing = moveX;
+                    Matter.Body.applyForce(myStick.torso, myStick.torso.position, { x: moveX * 0.008, y: 0 });
+                }
+
+                if ((keys.up || joystick.dy < -0.4) && Math.abs(myStick.torso.velocity.y) < 2.0) {
+                    Matter.Body.applyForce(myStick.torso, myStick.torso.position, { x: 0, y: -0.045 });
+                }
+
+                if (myStick.specialCooldown > 0) myStick.specialCooldown--;
+            }
+
+            // Interpolate Remote Opponent position gently
+            if (opponentStick && opponentStick.targetX) {
+                const currentX = opponentStick.torso.position.x;
+                const currentY = opponentStick.torso.position.y;
+                Matter.Body.setPosition(opponentStick.torso, {
+                    x: currentX + (opponentStick.targetX - currentX) * 0.2,
+                    y: currentY + (opponentStick.targetY - currentY) * 0.2
+                });
+            }
+
+            // Clear Game Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Render Arena Platforms & Hazards
+            const bodies = Matter.Composite.allBodies(engine.world);
+            bodies.forEach(body => {
+                if (body.render && body.render.fillStyle) {
+                    ctx.beginPath();
+                    const vertices = body.vertices;
+                    ctx.moveTo(vertices[0].x, vertices[0].y);
+                    for (let j = 1; j < vertices.length; j++) {
+                        ctx.lineTo(vertices[j].x, vertices[j].y);
+                    }
+                    ctx.closePath();
+                    ctx.fillStyle = body.render.fillStyle;
+                    ctx.fill();
+                    ctx.strokeStyle = '#27272a';
+                    ctx.stroke();
+                }
+            });
+
+            // Update & Draw Projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.life--;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = p.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Hit checks
+                const target = p.owner === p1Stick ? p2Stick : p1Stick;
+                const dist = Math.hypot(target.torso.position.x - p.x, target.torso.position.y - p.y);
+                if (dist < 30) {
+                    dealDamage(target, p.damage, p.vx > 0 ? 1 : -1);
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                if (p.life <= 0) projectiles.splice(i, 1);
+            }
+
+            // Draw Stickman P1 & P2
+            drawStickman(p1Stick);
+            drawStickman(p2Stick);
+
+            // Render Particle FX
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx; pt.y += pt.vy;
+                pt.life--;
+
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+                ctx.fillStyle = pt.color;
+                ctx.fill();
+
+                if (pt.life <= 0) particles.splice(i, 1);
+            }
+
+            // Render Floating Damage Texts
+            for (let i = damageTexts.length - 1; i >= 0; i--) {
+                const dt = damageTexts[i];
+                dt.y -= 0.8;
+                dt.life--;
+
+                ctx.font = 'bold 16px Orbitron';
+                ctx.fillStyle = dt.color;
+                ctx.fillText(dt.text, dt.x, dt.y);
+
+                if (dt.life <= 0) damageTexts.splice(i, 1);
+            }
+
+            requestAnimationFrame(gamePhysicsLoop);
+        }
+
+        // Draw Custom Stickman with Hat & Shield Aura
+        function drawStickman(stick) {
+            if (!stick) return;
+            const { torso, head, weaponHand, color, facing, hatId, shield } = stick;
+
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+
+            // Shield Aura FX
+            if (shield) {
+                ctx.beginPath();
+                ctx.arc(torso.position.x, torso.position.y, 40, 0, Math.PI * 2);
+                ctx.strokeStyle = '#ffea00';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ffea00';
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // Head
+            ctx.beginPath();
+            ctx.arc(head.position.x, head.position.y, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Torso
+            ctx.beginPath();
+            ctx.moveTo(head.position.x, head.position.y + 14);
+            ctx.lineTo(torso.position.x, torso.position.y + 24);
+            ctx.stroke();
+
+            // Hand / Arm
+            ctx.beginPath();
+            ctx.moveTo(torso.position.x, torso.position.y - 10);
+            ctx.lineTo(weaponHand.position.x, weaponHand.position.y);
+            ctx.stroke();
+
+            // Weapon Line
+            ctx.beginPath();
+            ctx.moveTo(weaponHand.position.x, weaponHand.position.y);
+            ctx.lineTo(weaponHand.position.x + facing * 35, weaponHand.position.y - 10);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Draw Custom Hat / Headgear Icons
+            ctx.font = '16px "Font Awesome 6 Free"';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            let hatSymbol = '👑';
+            if(hatId === 'viking') hatSymbol = '⚔️';
+            if(hatId === 'ninja') hatSymbol = '🥷';
+            if(hatId === 'wizard') hatSymbol = '🧙';
+            if(hatId === 'robot') hatSymbol = '🤖';
+            if(hatId === 'cyber') hatSymbol = '🎧';
+
+            ctx.fillText(hatSymbol, head.position.x, head.position.y - 18);
+        }
+
+        // Round & Game Management
+        function nextRound() {
+            document.getElementById('victoryModal').classList.add('hidden');
+            gameState.round++;
+            document.getElementById('roundIndicator').innerText = gameState.round;
+
+            p1Stick.hp = 100; p2Stick.hp = 100;
+            document.getElementById('p1HpBar').style.width = '100%';
+            document.getElementById('p2HpBar').style.width = '100%';
+            document.getElementById('hudP1Hp').innerText = '100 HP';
+            document.getElementById('hudP2Hp').innerText = '100 HP';
+
+            gameState.status = 'playing';
+            requestAnimationFrame(gamePhysicsLoop);
+        }
+
+        function backToMenu() {
+            document.getElementById('victoryModal').classList.add('hidden');
+            document.getElementById('gameView').classList.add('hidden');
+            document.getElementById('mainMenu').classList.remove('hidden');
+
+            if(roomUnsubscribe) roomUnsubscribe();
+            gameState.status = 'menu';
+        }
+    </script>
+</body>
+</html>
